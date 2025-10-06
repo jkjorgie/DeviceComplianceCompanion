@@ -133,60 +133,46 @@ def check_screensaver_idle():
 
     # --- 1) Idle time (per-host) ---
     idle = read_defaults("com.apple.screensaver", "idleTime", current_host=True)
-    idle_ok = isinstance(idle, int) and idle > 0 and idle <= threshold_secs
+    # idle_ok = isinstance(idle, int) and idle > 0 and idle <= threshold_secs
 
+    # --- 2 & 3) password required on wake + password req delay
     enabled, grace = get_macos_screenlock_settings_via_cli()
-    print(f"$enabled:{enabled}, grace:${grace}")
-
-    # --- 2 & 3) Password requirement + delay via osquery 'screenlock' table ---
-    def osq(query):
-        for binary in ("/opt/homebrew/bin/osqueryi", "/usr/local/bin/osqueryi", "osqueryi"):
-            rc, out = run(f'{binary} --json "{query}"')
-            if rc == 0 and out.strip().startswith("["):
-                try:
-                    return json.loads(out)
-                except Exception:
-                    pass
-        return []
-
-    rows = osq("SELECT enabled, grace_period FROM screenlock;")
-    enabled_raw, grace_raw = None, None
-    if rows:
-        # take the first row
-        r0 = rows[0]
-        enabled_raw = r0.get("enabled")
-        grace_raw = r0.get("grace_period")
+    # print(f"enabled:{enabled}, grace:{grace}")
 
     # Normalize
-    pw_ok = str(enabled_raw).strip().lower() in ("1", "true", "yes")
-    try:
-        delay_val = float(grace_raw) if grace_raw is not None else None
-    except (TypeError, ValueError):
-        delay_val = None
-    delay_ok = (delay_val is not None) and (delay_val == 0.0)
+    pw_ok = str(enabled).strip().lower() in ("1", "true", "yes")
 
-    compliant = bool(idle_ok and pw_ok and delay_ok)
+    try:
+        grace_val = float(grace) if grace is not None else None
+    except (TypeError, ValueError):
+        grace_val = None
+
+    delay_ok = (grace_val is not None) and ((idle + grace_val) <= threshold_secs)
+
+    compliant = bool(pw_ok and delay_ok)
+
+    # print(f"compliant:{compliant}")
 
     # --- Build status text ---
-    if idle is None:
-        idle_detail = f"idleTime not set — require ≤ {SCREENSAVER_MAX_MINUTES} min"
-    elif not isinstance(idle, int) or idle <= 0:
-        idle_detail = f"Never (0 minutes) — require ≤ {SCREENSAVER_MAX_MINUTES} min"
-    elif idle > threshold_secs:
-        idle_detail = f"{idle//60} minutes — exceeds {SCREENSAVER_MAX_MINUTES} min"
-    else:
-        idle_detail = f"{idle//60} minutes (OK)"
+    idle_detail = f"Cumulative Idle/Req PW timeout: {(idle + grace_val) / 60} min" if compliant else f"Cumulative Idle/Req PW timeout: {(idle + grace_val) / 60}min ({(idle / 60)}/{(grace_val / 60)})"
+    #if idle is None:
+    #    idle_detail = f"idleTime not set — require ≤ {SCREENSAVER_MAX_MINUTES} min"
+    #elif not isinstance(idle, int) or idle <= 0:
+    #    idle_detail = f"Never (0 minutes) — require ≤ {SCREENSAVER_MAX_MINUTES} min"
+    #elif idle > threshold_secs:
+    #    idle_detail = f"{idle//60} minutes — exceeds {SCREENSAVER_MAX_MINUTES} min"
+    #else:
+    #    idle_detail = f"{idle//60} minutes (OK)"
 
-    pw_detail = "Password on wake: ON" if pw_ok else f"Password on wake: OFF/Unknown (osquery enabled={enabled_raw})"
-    delay_detail = ("Immediate (OK)" if delay_ok
-                    else f"Delay={delay_val} (require 0)" if delay_val is not None
-                    else "Delay missing/unreadable via osquery")
+    pw_detail = "Password on wake: ON" if pw_ok else f"Password on wake: OFF/Unknown (osquery enabled={enabled})"
+    #delay_detail = ("Immediate (OK)" if delay_ok
+    #                else f"Delay={delay_val} (require 0)" if delay_val is not None
+    #                else "Delay missing/unreadable via osquery")
 
     status = (
-        f"{idle_detail}; {pw_detail}; {delay_detail} "
-        f"[screenlock.enabled={enabled_raw}, screenlock.grace_period={grace_raw}]"
+        f"{idle_detail}; {pw_detail} "
     )
-    return compliant, status, f"idleTime={idle}, screenlock.enabled={enabled_raw}, screenlock.grace_period={grace_raw}"
+    return compliant, status, f"idleTime={idle}, screenlock.enabled={enabled}, screenlock.grace_period={grace_val}"
 
 
 
