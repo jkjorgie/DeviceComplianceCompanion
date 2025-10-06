@@ -33,7 +33,7 @@ The following must be done only the first time you use it.
      ```bash
      brew install osquery
      ```
-5. **Download** `device_compliance-companion.py` file somewhere on your Mac (preferably **not** the Downloads folder).
+5. **Download** `device-compliance-companion.py` file somewhere on your Mac (preferably **not** the Downloads folder).
 
 ---
 
