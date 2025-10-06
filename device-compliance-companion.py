@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import subprocess, shlex, datetime, platform, os, sys, getpass
+import subprocess, shlex, datetime, platform, os, sys, getpass, osquery, shutil, json
+from osquery import ExtensionClient
 
 # ---------------- Config ----------------
 SCREENSAVER_MAX_MINUTES = 15  # NOT OK if idleTime > 15 minutes (or 0/None)
@@ -61,42 +62,112 @@ def read_defaults(domain, key, current_host=False):
     except ValueError:
         return out
 
+def _find_osqueryi():
+    # 1) Respect an override, if you set OSQUERYI=/full/path/to/osqueryi
+    env_path = os.environ.get("OSQUERYI")
+    candidates = []
+    if env_path:
+        candidates.append(env_path)
+
+    # 2) PATH lookup
+    which = shutil.which("osqueryi")
+    if which:
+        candidates.append(which)
+
+    # 3) Common install locations (Apple Silicon / Intel / cask)
+    candidates += [
+        "/opt/homebrew/bin/osqueryi",
+        "/usr/local/bin/osqueryi",
+        "/usr/local/opt/osquery/bin/osqueryi",
+        "/opt/osquery/bin/osqueryi",
+    ]
+
+    # Return the first existing, executable path
+    for p in candidates:
+        if p and os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    return None
+
+def get_macos_screenlock_settings_via_cli():
+    """
+    Returns (enabled: bool, grace_period: float) or (None, None) if osqueryi is unavailable.
+    """
+    binary = _find_osqueryi()
+    if not binary:
+        print("Error: osqueryi not found. Install with: brew install osquery")
+        return None, None
+
+    try:
+        out = subprocess.check_output(
+            [binary, "--json", "SELECT enabled, grace_period FROM screenlock;"],
+            text=True
+        )
+        rows = json.loads(out)
+        if isinstance(rows, list) and rows:
+            r0 = rows[0]
+            enabled_raw = r0.get("enabled")
+            grace_raw = r0.get("grace_period")
+            enabled = str(enabled_raw).strip().lower() in ("1", "true", "yes")
+            try:
+                grace = float(grace_raw) if grace_raw not in (None, "") else None
+            except (TypeError, ValueError):
+                grace = None
+            return enabled, grace
+    except Exception as e:
+        print(f"Error executing osquery via osqueryi: {e}")
+
+    return None, None
+
 def check_screensaver_idle():
     """
     Compliance requires ALL of the following:
-      1) Screensaver idleTime > 0 and <= SCREENSAVER_MAX_MINUTES
-      2) require password to wake == true  (via osascript/System Events)
-      3) require password to wake delay == 0 seconds (immediate)
+      1) Screensaver idleTime > 0 and <= SCREENSAVER_MAX_MINUTES          (per-host key)
+      2) Password required on wake == true                                 (via osquery screenlock.enabled)
+      3) Password delay (seconds) == 0 (immediate)                         (via osquery screenlock.grace_period)
+    Uses a single osquery query:
+      SELECT enabled, grace_period FROM screenlock;
     """
+    import json
+
     threshold_secs = SCREENSAVER_MAX_MINUTES * 60
 
-    # 1) Idle time (per-host)
+    # --- 1) Idle time (per-host) ---
     idle = read_defaults("com.apple.screensaver", "idleTime", current_host=True)
-
-    # 2) Password-on-wake (via System Events, not defaults)
-    rc_pw, out_pw = run(
-        "osascript -e 'tell application \"System Events\" to get require password to wake of security preferences'"
-    )
-    #rc_delay, out_delay = run(
-    #    "osascript -e 'tell application \"System Events\" to get require password to wake delay of security preferences'"
-    #)
-
-    # Normalize outputs
-    pw_ok = (rc_pw == 0) and (str(out_pw).strip().lower() in ("true", "1", "yes"))
-    # out_delay may be integer-like ("0") or float-like ("0.0")
-    #try:
-    #    delay_val = float(str(out_delay).strip())
-    #except Exception:
-    #    delay_val = None
-    #delay_ok = (rc_delay == 0) and (delay_val is not None) and (delay_val == 0.0)
-    delay_ok = True # don't need to actually look at delay_val because the rc_pw value handles it
-
-    # Evaluate idle compliance
     idle_ok = isinstance(idle, int) and idle > 0 and idle <= threshold_secs
+
+    enabled, grace = get_macos_screenlock_settings_via_cli()
+    print(f"$enabled:{enabled}, grace:${grace}")
+
+    # --- 2 & 3) Password requirement + delay via osquery 'screenlock' table ---
+    def osq(query):
+        for binary in ("/opt/homebrew/bin/osqueryi", "/usr/local/bin/osqueryi", "osqueryi"):
+            rc, out = run(f'{binary} --json "{query}"')
+            if rc == 0 and out.strip().startswith("["):
+                try:
+                    return json.loads(out)
+                except Exception:
+                    pass
+        return []
+
+    rows = osq("SELECT enabled, grace_period FROM screenlock;")
+    enabled_raw, grace_raw = None, None
+    if rows:
+        # take the first row
+        r0 = rows[0]
+        enabled_raw = r0.get("enabled")
+        grace_raw = r0.get("grace_period")
+
+    # Normalize
+    pw_ok = str(enabled_raw).strip().lower() in ("1", "true", "yes")
+    try:
+        delay_val = float(grace_raw) if grace_raw is not None else None
+    except (TypeError, ValueError):
+        delay_val = None
+    delay_ok = (delay_val is not None) and (delay_val == 0.0)
 
     compliant = bool(idle_ok and pw_ok and delay_ok)
 
-    # Build status details
+    # --- Build status text ---
     if idle is None:
         idle_detail = f"idleTime not set — require ≤ {SCREENSAVER_MAX_MINUTES} min"
     elif not isinstance(idle, int) or idle <= 0:
@@ -106,20 +177,18 @@ def check_screensaver_idle():
     else:
         idle_detail = f"{idle//60} minutes (OK)"
 
-    pw_detail = "Password on wake: ON" if pw_ok else f"Password on wake: OFF (osascript rc={rc_pw}, val={out_pw})"
-    #if delay_val is None:
-    #    delay_detail = f"Delay unreadable (osascript rc={rc_delay}, val={out_delay})"
-    #else:
-    #    delay_detail = "Immediate (OK)" if delay_ok else f"Delay={delay_val} (require 0)"
+    pw_detail = "Password on wake: ON" if pw_ok else f"Password on wake: OFF/Unknown (osquery enabled={enabled_raw})"
+    delay_detail = ("Immediate (OK)" if delay_ok
+                    else f"Delay={delay_val} (require 0)" if delay_val is not None
+                    else "Delay missing/unreadable via osquery")
 
     status = (
-        # f"{idle_detail}; {pw_detail}; {delay_detail} "
-        f"{idle_detail}; {pw_detail} "
-        # f"[requirePasswordToWake={out_pw}, requirePasswordToWakeDelay={out_delay}]"
-        f"[requirePasswordToWake={out_pw}]"
+        f"{idle_detail}; {pw_detail}; {delay_detail} "
+        f"[screenlock.enabled={enabled_raw}, screenlock.grace_period={grace_raw}]"
     )
-    # return compliant, status, f"idleTime={idle}, requirePasswordToWake={out_pw}, requirePasswordToWakeDelay={out_delay}"
-    return compliant, status, f"idleTime={idle}, requirePasswordToWake={out_pw}"
+    return compliant, status, f"idleTime={idle}, screenlock.enabled={enabled_raw}, screenlock.grace_period={grace_raw}"
+
+
 
 
 
