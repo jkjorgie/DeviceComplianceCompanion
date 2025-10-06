@@ -6,7 +6,7 @@ The following must be done only the first time you use it.
 > **Note:** You may be prompted to enter your Mac password at various points. Total install time should be ~20 minutes or less. If you run into errors, contact **Jay**.
 
 1. **Open Terminal**
-2. **Install Homebrew if you haven't already**
+2. **Install Homebrew**
    - 2a. Check version by running this in Terminal:
      ```bash
      brew --version
@@ -15,7 +15,7 @@ The following must be done only the first time you use it.
      ```bash
      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
      ```
-3. **Install Python if you haven't already**
+3. **Install Python**
    - 3a. Check version by running this in Terminal:
      ```bash
      python3 --version
@@ -24,14 +24,14 @@ The following must be done only the first time you use it.
      ```bash
      brew install python
      ```
-4. **Install osquery if you haven't already**
-   - 4a. Check version by running this in Terminal:
-     ```bash
-     osqueryi --version
-     ```
-   - 4b. If you don’t see something like `osqueryi version 5.19.0`, run this in Terminal:
+4. **Install osquery**
+   - 4a. Run this in Terminal:
      ```bash
      brew install osquery
+     ```
+   - 4b. Run this in Terminal:
+     ```bash
+     pip3 install osquery
      ```
 5. **Download** `device-compliance-companion.py` file somewhere on your Mac (preferably **not** the Downloads folder).
 
