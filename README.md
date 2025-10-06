@@ -33,14 +33,14 @@ The following must be done only the first time you use it.
      ```bash
      brew install osquery
      ```
+5. **Download** `device_compliance-companion.py` file somewhere on your Mac (preferably **not** the Downloads folder).
 
 ---
 
 ## Instructions to Run Device Compliance Companion
 
-1. **Download** the `device-compliance-companion.py` file somewhere on your Mac (preferably **not** the Downloads folder).
-2. In **Finder**, navigate to the folder where you saved `device-compliance-companion.py`.
-3. **Right-click the folder** (not the file) and choose **New Terminal at Folder**.
-4. Run this in Terminal:
+1. In **Finder**, navigate to the folder where you saved `device-compliance-companion.py`.
+2. **Right-click the folder** (not the file) and choose **New Terminal at Folder**.
+3. Run this in Terminal:
    ```bash
    python3 device-compliance-companion.py
