@@ -3,7 +3,7 @@
 ## Initial Installation Instructions
 The following must be done only the first time you use it.
 
-> **Note:** You may be prompted to enter your Mac password at various points. Total install time should be ~20 minutes or less. If you run into errors, contact **Jay**.
+> **Note:** You may be prompted to enter your Mac password at various points. Total install time should be 10 minutes or less. If you run into errors, contact **Jay**.
 
 1. **Open Terminal**
 2. **Install Homebrew**
