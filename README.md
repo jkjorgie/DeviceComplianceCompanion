@@ -7,7 +7,7 @@ The following must be done only the first time you use it.
 
 1. **Open Terminal**
 2. **Install Homebrew if you haven't already**
-   - 2a. Check version:
+   - 2a. Check version by running this in Terminal:
      ```bash
      brew --version
      ```
@@ -16,7 +16,7 @@ The following must be done only the first time you use it.
      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
      ```
 3. **Install Python if you haven't already**
-   - 3a. Check version:
+   - 3a. Check version by running this in Terminal:
      ```bash
      python3 --version
      ```
@@ -25,7 +25,7 @@ The following must be done only the first time you use it.
      brew install python
      ```
 4. **Install osquery if you haven't already**
-   - 4a. Check version:
+   - 4a. Check version by running this in Terminal:
      ```bash
      osqueryi --version
      ```
