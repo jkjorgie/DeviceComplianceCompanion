@@ -11,7 +11,7 @@ The following must be done only the first time you use it.
      ```bash
      brew --version
      ```
-   - 2b. If you don’t see something like `Homebrew 4.6.16`, install:
+   - 2b. If you don’t see something like `Homebrew 4.6.16`, run this in Terminal:
      ```bash
      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
      ```
@@ -20,7 +20,7 @@ The following must be done only the first time you use it.
      ```bash
      python3 --version
      ```
-   - 3b. If you don’t see something like `Python 3.11.5`, install:
+   - 3b. If you don’t see something like `Python 3.11.5`, run this in Terminal:
      ```bash
      brew install python
      ```
@@ -29,7 +29,7 @@ The following must be done only the first time you use it.
      ```bash
      osqueryi --version
      ```
-   - 4b. If you don’t see something like `osqueryi version 5.19.0`, install:
+   - 4b. If you don’t see something like `osqueryi version 5.19.0`, run this in Terminal:
      ```bash
      brew install osquery
      ```
@@ -41,6 +41,6 @@ The following must be done only the first time you use it.
 1. **Download** the `device-compliance-companion.py` file somewhere on your Mac (preferably **not** the Downloads folder).
 2. In **Finder**, navigate to the folder where you saved `device-compliance-companion.py`.
 3. **Right-click the folder** (not the file) and choose **New Terminal at Folder**.
-4. Run:
+4. Run this in Terminal:
    ```bash
    python3 device-compliance-companion.py
