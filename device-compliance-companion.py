@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-import subprocess, shlex, datetime, platform, os, sys, getpass, osquery, shutil, json
-from osquery import ExtensionClient
+import subprocess, shlex, datetime, platform, os, sys, getpass, shutil, json
 
 # ---------------- Config ----------------
 SCREENSAVER_MAX_MINUTES = 15  # NOT OK if idleTime > 15 minutes (or 0/None)
@@ -134,6 +133,11 @@ def check_screensaver_idle():
     # --- 1) Idle time (per-host) ---
     idle = read_defaults("com.apple.screensaver", "idleTime", current_host=True)
     # idle_ok = isinstance(idle, int) and idle > 0 and idle <= threshold_secs
+
+    if idle == 0:
+        idle = 9999999 # idle = 0 means screen saver is never set
+
+    # print(f"idle:{idle}")
 
     # --- 2 & 3) password required on wake + password req delay
     enabled, grace = get_macos_screenlock_settings_via_cli()
