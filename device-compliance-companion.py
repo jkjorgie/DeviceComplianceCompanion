@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import subprocess, shlex, datetime, platform, os, sys, getpass, shutil, json
+import subprocess, shlex, datetime, platform, os, sys, getpass, shutil, json, hashlib
 
 # ---------------- Config ----------------
 SCREENSAVER_MAX_MINUTES = 15  # NOT OK if idleTime > 15 minutes (or 0/None)
@@ -196,14 +196,30 @@ def check_filevault():
     if "filevault is off" in txt: return False, "OFF", out
     return False, "UNKNOWN", out
 
+def get_script_hash():
+    """
+    Calculate SHA-256 hash of this script file.
+    Used for integrity verification by security personnel.
+    """
+    try:
+        with open(__file__, 'rb') as f:
+            script_contents = f.read()
+            return hashlib.sha256(script_contents).hexdigest()
+    except Exception as e:
+        return f"ERROR: {e}"
+
 # ---------------- Main ----------------
 def main():
     now = datetime.datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
     comp = get_computer_name()
     user = get_current_user()
+    script_hash = get_script_hash()
+    
     bar = "=" * 72
     print(bar)
     print(f" {BOLD('macOS Compliance Check')}   |  Computer: {comp}  |  User: {user}  |  When: {now}")
+    print(bar)
+    print(f" {BOLD('Script Hash:')} {script_hash}")
     print(bar)
 
     gk_ok, gk_status, _ = check_gatekeeper()
