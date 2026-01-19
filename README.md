@@ -33,13 +33,12 @@ The following must be done only the first time you use it.
      ```bash
      pip3 install osquery
      ```
-5. **Download** `device-compliance-companion.py` file somewhere on your Mac (preferably **not** the Downloads folder).
 
 ---
 
 ## Instructions to Run Device Compliance Companion
 
-1. Download the latest `device-compliance-companion.py` file from its hosted location internally at GT.
+1. Download the latest `device-compliance-companion.py` file from its hosted location internally at GT. It is best to not save it in the Downloads folder, and instead put it elsewhere.
 2. In **Finder**, navigate to the folder where you saved `device-compliance-companion.py`.
 3. **Right-click the folder** (not the file) and choose **New Terminal at Folder**.
 4. Run this in Terminal:
